@@ -193,6 +193,10 @@ window.addEventListener("online",()=>{
 
 document.getElementById("popup").style.display="block";
 
+if(!navigator.onLine){
+    startGame();
+}
+
 });
 
 /* POPUP */
