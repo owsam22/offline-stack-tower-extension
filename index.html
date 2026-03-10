@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Offline Focus Tower</title>
+
+<style>
+
+body{
+margin:0;
+background:#111;
+color:white;
+font-family:Arial;
+text-align:center;
+}
+
+canvas{
+background:#222;
+display:block;
+margin:auto;
+border:2px solid white;
+}
+
+#gameContainer{
+display:none;
+}
+
+#popup{
+position:fixed;
+top:40%;
+left:50%;
+transform:translate(-50%,-50%);
+background:#000;
+padding:20px;
+border:2px solid white;
+display:none;
+}
+
+button{
+padding:10px 15px;
+margin:10px;
+cursor:pointer;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>Study Page</h2>
+<p>Game appears when internet goes offline</p>
+
+<div id="gameContainer">
+
+<h3>Focus Tower</h3>
+<p>Press SPACE to stack</p>
+
+<canvas id="game" width="400" height="500"></canvas>
+
+</div>
+
+<div id="popup">
+
+<p>Internet connection restored</p>
+
+<button onclick="backToStudy()">Back to Work</button>
+<button onclick="closePopup()">Keep Playing</button>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let stack=[];
+let movingBlock;
+let direction=1;
+
+/* CREATE BLOCK */
+
+function createBlock(width){
+
+return{
+x:0,
+y:canvas.height-(stack.length+1)*30,
+width:width,
+height:30
+}
+
+}
+
+/* START GAME */
+
+function startGame(){
+
+document.getElementById("gameContainer").style.display="block";
+
+stack=[];
+
+let base=createBlock(200);
+base.x=100;
+
+stack.push(base);
+
+movingBlock=createBlock(200);
+
+}
+
+/* DROP BLOCK */
+
+document.addEventListener("keydown",e=>{
+
+if(e.code==="Space"){
+
+let last=stack[stack.length-1];
+
+let overlap=
+Math.min(
+movingBlock.x+movingBlock.width,
+last.x+last.width
+)-
+Math.max(
+movingBlock.x,
+last.x
+);
+
+if(overlap<=0){
+
+alert("Tower collapsed!");
+startGame();
+return;
+
+}
+
+movingBlock.width=overlap;
+movingBlock.x=Math.max(movingBlock.x,last.x);
+
+stack.push(movingBlock);
+
+movingBlock=createBlock(overlap);
+
+}
+
+});
+
+/* GAME LOOP */
+
+function update(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+ctx.fillStyle="cyan";
+
+stack.forEach(b=>{
+ctx.fillRect(b.x,b.y,b.width,b.height);
+});
+
+movingBlock.x+=3*direction;
+
+if(
+movingBlock.x<=0 ||
+movingBlock.x+movingBlock.width>=canvas.width
+){
+direction*=-1;
+}
+
+ctx.fillStyle="orange";
+
+ctx.fillRect(
+movingBlock.x,
+movingBlock.y,
+movingBlock.width,
+movingBlock.height
+);
+
+requestAnimationFrame(update);
+
+}
+
+update();
+
+/* NETWORK EVENTS */
+
+window.addEventListener("offline",()=>{
+
+startGame();
+
+});
+
+window.addEventListener("online",()=>{
+
+document.getElementById("popup").style.display="block";
+
+});
+
+/* POPUP */
+
+function closePopup(){
+
+document.getElementById("popup").style.display="none";
+
+}
+
+function backToStudy(){
+
+document.getElementById("gameContainer").style.display="none";
+closePopup();
+
+}
+
+</script>
+
+</body>
+</html>
