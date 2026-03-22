@@ -1,220 +1,871 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-
-<title>Offline Focus Tower</title>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tower Stack 3D</title>
 <style>
-
-body{
-margin:0;
-background:#111;
-color:white;
-font-family:Arial;
-text-align:center;
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-canvas{
-background:#222;
-display:block;
-margin:auto;
-border:2px solid white;
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  background: #1a1a2e;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
-#gameContainer{
-display:none;
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
 }
 
-#popup{
-position:fixed;
-top:40%;
-left:50%;
-transform:translate(-50%,-50%);
-background:#000;
-padding:20px;
-border:2px solid white;
-display:none;
+#ui-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
 }
 
-button{
-padding:10px 15px;
-margin:10px;
-cursor:pointer;
+#score-display {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: clamp(36px, 8vw, 72px);
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  letter-spacing: 2px;
+  transition: transform 0.15s ease;
 }
 
+#score-display.pop {
+  transform: translateX(-50%) scale(1.3);
+}
+
+#best-score {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: clamp(12px, 2.5vw, 16px);
+  font-weight: 600;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+
+#start-screen {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  background: linear-gradient(135deg, rgba(26,26,46,0.9), rgba(22,33,62,0.9));
+  backdrop-filter: blur(8px);
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+
+#start-screen.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#start-screen h1 {
+  font-size: clamp(40px, 10vw, 80px);
+  font-weight: 900;
+  background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  text-align: center;
+  line-height: 1.1;
+}
+
+#start-screen .subtitle {
+  font-size: clamp(14px, 3vw, 20px);
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 50px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+#start-screen .tap-hint {
+  font-size: clamp(16px, 3.5vw, 22px);
+  color: rgba(255,255,255,0.7);
+  animation: pulse 2s ease-in-out infinite;
+  pointer-events: auto;
+  cursor: pointer;
+  padding: 20px 40px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 50px;
+  transition: border-color 0.3s ease;
+}
+
+#start-screen .tap-hint:hover {
+  border-color: rgba(255,255,255,0.5);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+#game-over-screen {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  background: rgba(10,10,20,0.85);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+#game-over-screen.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+#game-over-screen h2 {
+  font-size: clamp(36px, 8vw, 64px);
+  font-weight: 900;
+  color: #ff6b6b;
+  margin-bottom: 10px;
+  text-shadow: 0 0 40px rgba(255,107,107,0.4);
+}
+
+#game-over-screen .final-score {
+  font-size: clamp(48px, 12vw, 96px);
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+#game-over-screen .final-label {
+  font-size: clamp(12px, 2.5vw, 16px);
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  margin-bottom: 40px;
+}
+
+#game-over-screen .best-label {
+  font-size: clamp(13px, 2.5vw, 17px);
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 40px;
+  letter-spacing: 2px;
+}
+
+#restart-btn {
+  font-size: clamp(16px, 3.5vw, 20px);
+  color: #fff;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border: none;
+  padding: 16px 48px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 30px rgba(102,126,234,0.4);
+}
+
+#restart-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 40px rgba(102,126,234,0.6);
+}
+
+#restart-btn:active {
+  transform: scale(0.97);
+}
+
+#combo-display {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 32px;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255,215,0,0.6);
+  opacity: 0;
+  transition: none;
+  pointer-events: none;
+}
 </style>
-
 </head>
-
 <body>
 
-<h2>Study Page</h2>
-<p>Game appears when internet goes offline</p>
-
-<div id="gameContainer">
-
-<h3>Focus Tower</h3>
-<p>Press SPACE to stack</p>
-
-<canvas id="game" width="400" height="500"></canvas>
-
+<div id="ui-overlay">
+  <div id="score-display">0</div>
+  <div id="best-score"></div>
+  <div id="combo-display"></div>
 </div>
 
-<div id="popup">
-
-<p>Internet connection restored</p>
-
-<button onclick="backToStudy()">Back to Work</button>
-<button onclick="closePopup()">Keep Playing</button>
-
+<div id="start-screen">
+  <h1>Tower Stack</h1>
+  <div class="subtitle">3D Edition</div>
+  <div class="tap-hint">Tap or Press Space</div>
 </div>
 
+<div id="game-over-screen">
+  <h2>Game Over</h2>
+  <div class="final-score" id="final-score">0</div>
+  <div class="final-label">Score</div>
+  <div class="best-label" id="go-best"></div>
+  <button id="restart-btn">Play Again</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <script>
+(() => {
+  // ─── Constants ───
+  const BLOCK_HEIGHT = 0.22;
+  const INITIAL_SIZE = 3;
+  const MOVE_SPEED_INITIAL = 0.04;
+  const MOVE_SPEED_MAX = 0.12;
+  const MOVE_AMPLITUDE = 4.5;
+  const PERFECT_THRESHOLD = 0.08;
+  const CAMERA_SMOOTH = 0.06;
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+  // ─── DOM refs ───
+  const scoreDisplay = document.getElementById('score-display');
+  const bestScoreDisplay = document.getElementById('best-score');
+  const startScreen = document.getElementById('start-screen');
+  const gameOverScreen = document.getElementById('game-over-screen');
+  const finalScoreEl = document.getElementById('final-score');
+  const goBestEl = document.getElementById('go-best');
+  const restartBtn = document.getElementById('restart-btn');
+  const comboDisplay = document.getElementById('combo-display');
 
-let stack=[];
-let movingBlock;
-let direction=1;
+  // ─── Three.js Setup ───
+  let scene, camera, renderer, ambientLight, dirLight;
+  let animationId;
 
-/* CREATE BLOCK */
+  function initThree() {
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x16213e, 0.012);
 
-function createBlock(width){
+    // Orthographic camera for isometric look
+    const aspect = window.innerWidth / window.innerHeight;
+    const viewSize = 6;
+    camera = new THREE.OrthographicCamera(
+      -viewSize * aspect, viewSize * aspect,
+      viewSize, -viewSize,
+      -50, 200
+    );
+    camera.position.set(8, 10, 8);
+    camera.lookAt(0, 0, 0);
 
-return{
-x:0,
-y:canvas.height-(stack.length+1)*30,
-width:width,
-height:30
-}
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setClearColor(0x16213e, 1);
 
-}
+    // Remove old canvas if any
+    const oldCanvas = document.querySelector('canvas');
+    if (oldCanvas) oldCanvas.remove();
+    document.body.prepend(renderer.domElement);
 
-/* START GAME */
+    // Lighting
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+    scene.add(ambientLight);
 
-function startGame(){
+    dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+    dirLight.position.set(8, 20, 6);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.set(1024, 1024);
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 60;
+    dirLight.shadow.camera.left = -12;
+    dirLight.shadow.camera.right = 12;
+    dirLight.shadow.camera.top = 12;
+    dirLight.shadow.camera.bottom = -12;
+    scene.add(dirLight);
 
-document.getElementById("gameContainer").style.display="block";
+    const fillLight = new THREE.DirectionalLight(0x667eea, 0.3);
+    fillLight.position.set(-5, 8, -5);
+    scene.add(fillLight);
+  }
 
-stack=[];
+  // ─── Game State ───
+  let stack = [];
+  let fallingPieces = [];
+  let particles = [];
+  let score = 0;
+  let bestScore = parseInt(localStorage.getItem('towerStackBest') || '0');
+  let gameActive = false;
+  let gameStarted = false;
+  let movingBlock = null;
+  let moveDirection = 1;
+  let moveAxis = 'x'; // alternates between 'x' and 'z'
+  let currentSpeed = MOVE_SPEED_INITIAL;
+  let combo = 0;
+  let cameraTargetY = 0;
+  let perfectFlashMeshes = [];
+  let bgHue = 220;
 
-let base=createBlock(200);
-base.x=100;
+  // ─── Color Palette ───
+  function getBlockColor(index) {
+    const hue = (200 + index * 11) % 360;
+    const sat = 55 + Math.sin(index * 0.2) * 15;
+    const light = 52 + Math.sin(index * 0.15) * 10;
+    return new THREE.Color(`hsl(${hue}, ${sat}%, ${light}%)`);
+  }
 
-stack.push(base);
+  function createBlockMesh(x, z, width, depth, y, colorIndex) {
+    const geo = new THREE.BoxGeometry(width, BLOCK_HEIGHT, depth);
+    const color = getBlockColor(colorIndex);
+    const mat = new THREE.MeshStandardMaterial({
+      color: color,
+      roughness: 0.45,
+      metalness: 0.15,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    return mesh;
+  }
 
-movingBlock=createBlock(200);
+  function createBase() {
+    // Larger base platform
+    const geo = new THREE.BoxGeometry(INITIAL_SIZE + 1, 0.5, INITIAL_SIZE + 1);
+    const mat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(`hsl(210, 30%, 25%)`),
+      roughness: 0.7,
+      metalness: 0.1,
+    });
+    const base = new THREE.Mesh(geo, mat);
+    base.position.set(0, -0.35, 0);
+    base.receiveShadow = true;
+    scene.add(base);
 
-}
+    // First block on the base
+    const mesh = createBlockMesh(0, 0, INITIAL_SIZE, INITIAL_SIZE, BLOCK_HEIGHT / 2, 0);
+    stack.push({
+      mesh,
+      x: 0,
+      z: 0,
+      width: INITIAL_SIZE,
+      depth: INITIAL_SIZE,
+    });
+  }
 
-/* DROP BLOCK */
+  function spawnMovingBlock() {
+    const prev = stack[stack.length - 1];
+    const y = stack.length * BLOCK_HEIGHT + BLOCK_HEIGHT / 2;
+    const colorIndex = stack.length;
 
-document.addEventListener("keydown",e=>{
+    moveAxis = stack.length % 2 === 1 ? 'x' : 'z';
 
-if(e.code==="Space"){
+    const startPos = -MOVE_AMPLITUDE;
+    let x, z;
+    if (moveAxis === 'x') {
+      x = startPos;
+      z = prev.z;
+    } else {
+      x = prev.x;
+      z = startPos;
+    }
 
-let last=stack[stack.length-1];
+    const mesh = createBlockMesh(x, z, prev.width, prev.depth, y, colorIndex);
+    movingBlock = {
+      mesh,
+      x, z,
+      width: prev.width,
+      depth: prev.depth,
+      y,
+    };
+    moveDirection = 1;
 
-let overlap=
-Math.min(
-movingBlock.x+movingBlock.width,
-last.x+last.width
-)-
-Math.max(
-movingBlock.x,
-last.x
-);
+    // Increase speed with score
+    currentSpeed = Math.min(MOVE_SPEED_INITIAL + score * 0.0012, MOVE_SPEED_MAX);
+  }
 
-if(overlap<=0){
+  // ─── Slicing Logic ───
+  function placeBlock() {
+    if (!movingBlock || !gameActive) return;
 
-alert("Tower collapsed!");
-startGame();
-return;
+    const prev = stack[stack.length - 1];
+    const curr = movingBlock;
 
-}
+    let overlap, newPos, newSize, overhang, overhangPos, overhangSize;
 
-movingBlock.width=overlap;
-movingBlock.x=Math.max(movingBlock.x,last.x);
+    if (moveAxis === 'x') {
+      const delta = curr.x - prev.x;
+      overlap = prev.width - Math.abs(delta);
 
-stack.push(movingBlock);
+      if (overlap <= 0) {
+        // Missed entirely
+        handleMiss();
+        return;
+      }
 
-movingBlock=createBlock(overlap);
+      // Perfect placement bonus
+      if (Math.abs(delta) < PERFECT_THRESHOLD) {
+        handlePerfect(prev, curr);
+        return;
+      }
 
-}
+      newSize = overlap;
+      newPos = prev.x + (delta > 0 ? (prev.width - overlap) / 2 : -(prev.width - overlap) / 2);
+      // newPos is center of overlap
+      newPos = (curr.x + delta > 0 ? (curr.x - (curr.width - overlap) / 2) : (curr.x + (curr.width - overlap) / 2));
+      // Simpler: the overlap region
+      const overlapLeft = Math.max(curr.x - curr.width / 2, prev.x - prev.width / 2);
+      const overlapRight = Math.min(curr.x + curr.width / 2, prev.x + prev.width / 2);
+      newPos = (overlapLeft + overlapRight) / 2;
+      newSize = overlapRight - overlapLeft;
 
-});
+      overhangSize = curr.width - newSize;
+      if (delta > 0) {
+        overhangPos = overlapRight + overhangSize / 2;
+      } else {
+        overhangPos = overlapLeft - overhangSize / 2;
+      }
 
-/* GAME LOOP */
+      // Remove moving block mesh
+      scene.remove(curr.mesh);
+      curr.mesh.geometry.dispose();
 
-function update(){
+      // Create placed block
+      const placedMesh = createBlockMesh(newPos, curr.z, newSize, curr.depth, curr.y, stack.length);
+      stack.push({
+        mesh: placedMesh,
+        x: newPos,
+        z: curr.z,
+        width: newSize,
+        depth: curr.depth,
+      });
 
-ctx.clearRect(0,0,canvas.width,canvas.height);
+      // Create falling overhang
+      if (overhangSize > 0.01) {
+        const fallMesh = createBlockMesh(overhangPos, curr.z, overhangSize, curr.depth, curr.y, stack.length - 1);
+        fallingPieces.push({
+          mesh: fallMesh,
+          velocity: new THREE.Vector3((delta > 0 ? 1 : -1) * 0.02, 0, 0),
+          rotVelocity: new THREE.Vector3(0, 0, (delta > 0 ? -1 : 1) * 0.05),
+        });
+      }
 
-ctx.fillStyle="cyan";
+    } else {
+      // z-axis
+      const delta = curr.z - prev.z;
+      overlap = prev.depth - Math.abs(delta);
 
-stack.forEach(b=>{
-ctx.fillRect(b.x,b.y,b.width,b.height);
-});
+      if (overlap <= 0) {
+        handleMiss();
+        return;
+      }
 
-movingBlock.x+=3*direction;
+      if (Math.abs(delta) < PERFECT_THRESHOLD) {
+        handlePerfect(prev, curr);
+        return;
+      }
 
-if(
-movingBlock.x<=0 ||
-movingBlock.x+movingBlock.width>=canvas.width
-){
-direction*=-1;
-}
+      const overlapFront = Math.max(curr.z - curr.depth / 2, prev.z - prev.depth / 2);
+      const overlapBack = Math.min(curr.z + curr.depth / 2, prev.z + prev.depth / 2);
+      newPos = (overlapFront + overlapBack) / 2;
+      newSize = overlapBack - overlapFront;
 
-ctx.fillStyle="orange";
+      overhangSize = curr.depth - newSize;
+      if (delta > 0) {
+        overhangPos = overlapBack + overhangSize / 2;
+      } else {
+        overhangPos = overlapFront - overhangSize / 2;
+      }
 
-ctx.fillRect(
-movingBlock.x,
-movingBlock.y,
-movingBlock.width,
-movingBlock.height
-);
+      scene.remove(curr.mesh);
+      curr.mesh.geometry.dispose();
 
-requestAnimationFrame(update);
+      const placedMesh = createBlockMesh(curr.x, newPos, curr.width, newSize, curr.y, stack.length);
+      stack.push({
+        mesh: placedMesh,
+        x: curr.x,
+        z: newPos,
+        width: curr.width,
+        depth: newSize,
+      });
 
-}
+      if (overhangSize > 0.01) {
+        const fallMesh = createBlockMesh(curr.x, overhangPos, curr.width, overhangSize, curr.y, stack.length - 1);
+        fallingPieces.push({
+          mesh: fallMesh,
+          velocity: new THREE.Vector3(0, 0, (delta > 0 ? 1 : -1) * 0.02),
+          rotVelocity: new THREE.Vector3((delta > 0 ? -1 : 1) * 0.05, 0, 0),
+        });
+      }
+    }
 
-update();
+    combo = 0;
+    score++;
+    updateScore();
+    movingBlock = null;
+    spawnMovingBlock();
+    updateCameraTarget();
+  }
 
-/* NETWORK EVENTS */
+  function handlePerfect(prev, curr) {
+    // Perfect placement: keep full size of previous block
+    scene.remove(curr.mesh);
+    curr.mesh.geometry.dispose();
 
-window.addEventListener("offline",()=>{
+    const placedMesh = createBlockMesh(prev.x, prev.z, prev.width, prev.depth, curr.y, stack.length);
+    stack.push({
+      mesh: placedMesh,
+      x: prev.x,
+      z: prev.z,
+      width: prev.width,
+      depth: prev.depth,
+    });
 
-startGame();
+    combo++;
+    score++;
 
-});
+    // Perfect flash effect
+    spawnPerfectEffect(prev.x, curr.y, prev.z);
+    showCombo();
 
-window.addEventListener("online",()=>{
+    updateScore();
+    movingBlock = null;
+    spawnMovingBlock();
+    updateCameraTarget();
+  }
 
-document.getElementById("popup").style.display="block";
+  function handleMiss() {
+    gameActive = false;
 
-if(!navigator.onLine){
-    startGame();
-}
+    // The whole block falls
+    const curr = movingBlock;
+    const delta = moveAxis === 'x' ? (curr.x > 0 ? 1 : -1) : (curr.z > 0 ? 1 : -1);
+    fallingPieces.push({
+      mesh: curr.mesh,
+      velocity: new THREE.Vector3(
+        moveAxis === 'x' ? delta * 0.02 : 0,
+        0,
+        moveAxis === 'z' ? delta * 0.02 : 0
+      ),
+      rotVelocity: new THREE.Vector3(
+        moveAxis === 'z' ? -delta * 0.06 : 0,
+        0,
+        moveAxis === 'x' ? -delta * 0.06 : 0
+      ),
+    });
 
-});
+    movingBlock = null;
 
-/* POPUP */
+    // Show game over after a short delay
+    setTimeout(() => showGameOver(), 800);
+  }
 
-function closePopup(){
+  // ─── Effects ───
+  function spawnPerfectEffect(x, y, z) {
+    // Ring of particles
+    const count = 14;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const geo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0xffd700,
+        emissive: 0xffd700,
+        emissiveIntensity: 0.5,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      scene.add(mesh);
+      particles.push({
+        mesh,
+        velocity: new THREE.Vector3(
+          Math.cos(angle) * 0.06,
+          0.04 + Math.random() * 0.03,
+          Math.sin(angle) * 0.06
+        ),
+        life: 1.0,
+        decay: 0.015 + Math.random() * 0.01,
+      });
+    }
 
-document.getElementById("popup").style.display="none";
+    // Flash ring
+    const ringGeo = new THREE.RingGeometry(0.3, 0.5, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.8,
+      side: THREE.DoubleSide,
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.set(x, y + BLOCK_HEIGHT / 2 + 0.01, z);
+    ring.rotation.x = -Math.PI / 2;
+    scene.add(ring);
+    perfectFlashMeshes.push({ mesh: ring, scale: 1, opacity: 0.8 });
+  }
 
-}
+  function showCombo() {
+    if (combo >= 2) {
+      comboDisplay.textContent = combo >= 5 ? `PERFECT x${combo}!` : `Perfect x${combo}`;
+      comboDisplay.style.opacity = '1';
+      comboDisplay.style.transform = 'translate(-50%, -50%) scale(1.2)';
+      comboDisplay.style.transition = 'none';
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          comboDisplay.style.transition = 'opacity 1s ease, transform 1s ease';
+          comboDisplay.style.opacity = '0';
+          comboDisplay.style.transform = 'translate(-50%, -80%) scale(0.8)';
+        });
+      });
+    }
+  }
 
-function backToStudy(){
+  // ─── Score ───
+  function updateScore() {
+    scoreDisplay.textContent = score;
+    scoreDisplay.classList.add('pop');
+    setTimeout(() => scoreDisplay.classList.remove('pop'), 150);
+  }
 
-document.getElementById("gameContainer").style.display="none";
-closePopup();
+  function updateBestScore() {
+    if (score > bestScore) {
+      bestScore = score;
+      localStorage.setItem('towerStackBest', bestScore);
+    }
+    if (bestScore > 0) {
+      bestScoreDisplay.textContent = `BEST: ${bestScore}`;
+    }
+  }
 
-}
+  // ─── Camera ───
+  function updateCameraTarget() {
+    cameraTargetY = (stack.length - 1) * BLOCK_HEIGHT;
+  }
 
+  // ─── Background ───
+  function updateBackground() {
+    bgHue = (220 + score * 3) % 360;
+    const r = Math.sin(bgHue * Math.PI / 180) * 0.08 + 0.08;
+    const g = Math.sin((bgHue + 120) * Math.PI / 180) * 0.06 + 0.1;
+    const b = Math.sin((bgHue + 240) * Math.PI / 180) * 0.1 + 0.2;
+    renderer.setClearColor(new THREE.Color(r, g, b));
+    if (scene.fog) {
+      scene.fog.color.setRGB(r, g, b);
+    }
+  }
+
+  // ─── Game Over ───
+  function showGameOver() {
+    updateBestScore();
+    finalScoreEl.textContent = score;
+    goBestEl.textContent = `Best: ${bestScore}`;
+    gameOverScreen.classList.add('visible');
+  }
+
+  // ─── Reset ───
+  function resetGame() {
+    // Clear scene objects
+    while (scene.children.length > 0) {
+      const obj = scene.children[0];
+      scene.remove(obj);
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) obj.material.dispose();
+    }
+
+    // Re-add lights
+    scene.add(ambientLight);
+    scene.add(dirLight);
+    const fillLight = new THREE.DirectionalLight(0x667eea, 0.3);
+    fillLight.position.set(-5, 8, -5);
+    scene.add(fillLight);
+
+    stack = [];
+    fallingPieces = [];
+    particles = [];
+    perfectFlashMeshes = [];
+    score = 0;
+    combo = 0;
+    currentSpeed = MOVE_SPEED_INITIAL;
+    cameraTargetY = 0;
+    movingBlock = null;
+    gameActive = true;
+
+    scoreDisplay.textContent = '0';
+    gameOverScreen.classList.remove('visible');
+
+    updateBestScore();
+
+    createBase();
+    spawnMovingBlock();
+    updateBackground();
+  }
+
+  // ─── Input ───
+  function handleInput(e) {
+    if (e && e.type === 'keydown' && e.code !== 'Space') return;
+    if (e) e.preventDefault();
+
+    if (!gameStarted) {
+      gameStarted = true;
+      startScreen.classList.add('hidden');
+      resetGame();
+      return;
+    }
+
+    if (!gameActive) return;
+    placeBlock();
+  }
+
+  window.addEventListener('keydown', handleInput);
+  window.addEventListener('pointerdown', handleInput);
+
+  restartBtn.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    resetGame();
+  });
+  restartBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  // ─── Resize ───
+  function onResize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const aspect = w / h;
+    const viewSize = 6;
+
+    camera.left = -viewSize * aspect;
+    camera.right = viewSize * aspect;
+    camera.top = viewSize;
+    camera.bottom = -viewSize;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(w, h);
+  }
+  window.addEventListener('resize', onResize);
+
+  // ─── Animation Loop ───
+  function animate() {
+    animationId = requestAnimationFrame(animate);
+
+    // Move the current block
+    if (movingBlock && gameActive) {
+      if (moveAxis === 'x') {
+        movingBlock.x += currentSpeed * moveDirection;
+        movingBlock.mesh.position.x = movingBlock.x;
+        if (movingBlock.x > MOVE_AMPLITUDE || movingBlock.x < -MOVE_AMPLITUDE) {
+          moveDirection *= -1;
+        }
+      } else {
+        movingBlock.z += currentSpeed * moveDirection;
+        movingBlock.mesh.position.z = movingBlock.z;
+        if (movingBlock.z > MOVE_AMPLITUDE || movingBlock.z < -MOVE_AMPLITUDE) {
+          moveDirection *= -1;
+        }
+      }
+    }
+
+    // Animate falling pieces
+    for (let i = fallingPieces.length - 1; i >= 0; i--) {
+      const fp = fallingPieces[i];
+      fp.velocity.y -= 0.003; // gravity
+      fp.mesh.position.add(fp.velocity);
+      fp.mesh.rotation.x += fp.rotVelocity.x;
+      fp.mesh.rotation.z += fp.rotVelocity.z;
+
+      if (fp.mesh.position.y < -15) {
+        scene.remove(fp.mesh);
+        fp.mesh.geometry.dispose();
+        fp.mesh.material.dispose();
+        fallingPieces.splice(i, 1);
+      }
+    }
+
+    // Animate particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.velocity.y -= 0.001;
+      p.mesh.position.add(p.velocity);
+      p.life -= p.decay;
+      p.mesh.material.opacity = p.life;
+      p.mesh.material.transparent = true;
+      p.mesh.scale.setScalar(p.life);
+
+      if (p.life <= 0) {
+        scene.remove(p.mesh);
+        p.mesh.geometry.dispose();
+        p.mesh.material.dispose();
+        particles.splice(i, 1);
+      }
+    }
+
+    // Animate perfect flash rings
+    for (let i = perfectFlashMeshes.length - 1; i >= 0; i--) {
+      const pf = perfectFlashMeshes[i];
+      pf.scale += 0.08;
+      pf.opacity -= 0.02;
+      pf.mesh.scale.setScalar(pf.scale);
+      pf.mesh.material.opacity = Math.max(pf.opacity, 0);
+
+      if (pf.opacity <= 0) {
+        scene.remove(pf.mesh);
+        pf.mesh.geometry.dispose();
+        pf.mesh.material.dispose();
+        perfectFlashMeshes.splice(i, 1);
+      }
+    }
+
+    // Smooth camera follow
+    const targetCamY = cameraTargetY + 10;
+    camera.position.y += (targetCamY - camera.position.y) * CAMERA_SMOOTH;
+    camera.lookAt(0, cameraTargetY, 0);
+    dirLight.position.y = cameraTargetY + 20;
+    dirLight.target.position.set(0, cameraTargetY, 0);
+    dirLight.target.updateMatrixWorld();
+
+    // Update background gradient
+    updateBackground();
+
+    renderer.render(scene, camera);
+  }
+
+  // ─── Init ───
+  initThree();
+  onResize();
+
+  // Create initial preview tower on start screen
+  createBase();
+  updateBestScore();
+
+  animate();
+
+})();
 </script>
-
 </body>
 </html>
